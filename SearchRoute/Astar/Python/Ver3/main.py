@@ -1,145 +1,94 @@
 # -*- coding: utf-8 -*-
 from heapq import heappush, heappop
-import math
-import time
-import random
+import numpy as np
+import cv2
 
 class node:
-    (xPos, yPos) = (0, 0)
-    distance = 0 # total distance already travelled to reach the node
-    priority = 0 # priority = distance + remaining distance estimate
-    def __init__(self, xPos, yPos, distance, priority):
-        self.xPos = xPos
-        self.yPos = yPos
-        self.distance = distance
-        self.priority = priority
-    def __lt__(self, other): # comparison method for priority queue
-        return self.priority < other.priority
-    def updatePriority(self, xDest, yDest):
-        self.priority = self.distance + self.estimate(xDest, yDest) * 10 # A*
-    # give higher priority to going straight instead of diagonally
-    def nextMove(self, dirs, d): # d: direction to move
-        if dirs == 8 and d % 2 != 0:
-            self.distance += 14
-        else:
-            self.distance += 10
-    # Estimation function for the remaining distance to the goal.
-    def estimate(self, xDest, yDest):
-        xd = xDest - self.xPos
-        yd = yDest - self.yPos
-        d = math.sqrt(xd * xd + yd * yd)
-        return(d)
+    def __init__(self, xp, yp, gs, fs): # 初期値
+        (self.x,self.y) = (xp, yp)
+        (self.gs,self.fs) = (gs, fs)
+    def __lt__(self, other):            # f*の比較
+        return self.fs < other.fs
+    def update_fs(self, xd, yd):        # f*(n)=g*(n)+h*(n)の更新
+        self.fs = self.gs + self.hs(xd, yd) * 10
+    def next_move(self):                # 斜め直進の代わりに高いg*を与える
+        self.gs += 10
+    def hs(self, xd, yd):
+        return(np.sqrt((xd - self.x)**2 + (yd - self.y)**2))
 
 # A-star algorithm.
-def pathFind(maps, (x1, y1), (x2, y2)):
-    n=30
-    m=30
-    dirs = 8 # マップ上の移動可能な方向数
-    dx = [1, 1, 0, -1, -1, -1, 0, 1]
-    dy = [0, 1, 1, 1, 0, -1, -1, -1]
-    closed_map = [] # 閉ノードのマップ
-    open_map = [] # オープンノードのマップ
-    dir_map = [] # 方向のマップ
-    row = [0] * n
-    for i in range(m): # 2次元リストの作成
-        closed_map.append(list(row))
-        open_map.append(list(row))
-        dir_map.append(list(row))
+def astar(maps, (x1, y1), (x2, y2)):
+    (n, m) = maps.shape
+    closed = np.zeros((n, m), dtype=np.int) # closeリスト用マップ
+    opened = np.zeros((n, m), dtype=np.int) # openリスト用マップ
+    v = np.zeros((n, m), dtype=np.int)      # 方向用マップ
+    vx = [1, 0, -1, 0]
+    vy = [0, 1, 0, -1]
+    cost = [[], []]             # オープンリストのコスト
+    ci = 0                      # インデックスのコスト
+    n0 = node(x1, y1, 0, 0)     # 開始ノードを作成してオープンノードリストにプッシュ
+    n0.update_fs = 0            # f*(0)=0
+    heappush(cost[ci], n0)
+    closed[y1][x1] = n0.fs      # mark it on the open nodes map
 
-    pq = [[], []] # priority queues of open (not-yet-tried) nodes
-    pqi = 0 # priority queue index
-    # 開始ノードを作成してオープンノードリストにプッシュ
-    n0 = node(x1, y1, 0, 0)
-    n0.updatePriority(x2, y2)
-    heappush(pq[pqi], n0)
-    open_map[y1][x1] = n0.priority # mark it on the open nodes map
-
-    # A* search
-    while len(pq[pqi]) > 0:
-        # オープンノードのリストから最も優先度の高いノードを取得
-        n1 = pq[pqi][0] # トップのノード
-        n0 = node(n1.xPos, n1.yPos, n1.distance, n1.priority)
-        x = n0.xPos
-        y = n0.yPos
-        heappop(pq[pqi]) # オープンリストから
-        open_map[y][x] = 0
-        closed_map[y][x] = 1 # マーク
-
-        # ゴールに到着したら探索終了
+    while len(cost[ci]) > 0:
+        # openリストから最もコストの高いノードを取得
+        n1 = cost[ci][0]        # トップのノード
+        n0 = node(n1.x, n1.y, n1.gs, n1.fs)
+        (x, y) = (n0.x, n0.y)
+        heappop(cost[ci])
+        opened[y][x] = 0
+        closed[y][x] = 1
+        # ゴールに到着したら探索終了して経路取得
         if x == x2 and y == y2:
-            # 経路作成
-            path = ''
+            paths = [[x1, y1]]
             while not (x == x1 and y == y1):
-                j = dir_map[y][x]
-                c = str((j + dirs / 2) % dirs)
-                path = c + path
-                x += dx[j]
-                y += dy[j]
-
-            print('Path:',path)
-            if len(path) > 0:
-                (x, y) = (x1, y1)
-                maps[y][x] = 2
-                for i in range(len(path)):
-                    j = int(path[i])
-                    x += dx[j]
-                    y += dy[j]
-                    maps[y][x] = 3
-
-            for y in range(m):
-                 for x in range(n):
-                    xy = maps[y][x]
-                    if xy == 0:
-                        print '.', # space
-                    elif xy == 1:
-                        print 'O', # obstacle
-                    elif xy == 2:
-                        print 'S', # start
-                    elif xy == 3:
-                        print 'R', # route
-                 print
+                j = v[y][x]
+                x += vx[j]
+                y += vy[j]
+                paths.append([y,x])
+            return paths[::-1]
 
         # 移動可能な移動方向の作成（子ノード）
-        for i in range(dirs):
-            xdx = x + dx[i]
-            ydy = y + dy[i]
-            if not (xdx < 0 or xdx > n-1 or ydy < 0 or ydy > m - 1
-                    or maps[ydy][xdx] == 1 or closed_map[ydy][xdx] == 1):
-                # 子ノード
-                m0 = node(xdx, ydy, n0.distance, n0.priority)
-                m0.nextMove(dirs, i)
-                m0.updatePriority(x2, y2)
-                # オープンリスト中にない場合は追加
-                if open_map[ydy][xdx] == 0:
-                    open_map[ydy][xdx] = m0.priority
-                    heappush(pq[pqi], m0)
-                    # 親ノードの方向をマーク
-                    dir_map[ydy][xdx] = (i + dirs / 2) % dirs
-                elif open_map[ydy][xdx] > m0.priority:
-                    # 優先度を更新
-                    open_map[ydy][xdx] = m0.priority
-                    # 親の方向を更新
-                    dir_map[ydy][xdx] = (i + dirs / 2) % dirs
-                    while not (pq[pqi][0].xPos == xdx and pq[pqi][0].yPos == ydy):
-                        heappush(pq[1 - pqi], pq[pqi][0])
-                        heappop(pq[pqi])
-                    heappop(pq[pqi]) # 目標ノードを除去
-                    # empty the larger size priority queue to the smaller one
-                    if len(pq[pqi]) > len(pq[1 - pqi]):
-                        pqi = 1 - pqi
-                    while len(pq[pqi]) > 0:
-                        heappush(pq[1-pqi], pq[pqi][0])
-                        heappop(pq[pqi])
-                    pqi = 1 - pqi
-                    heappush(pq[pqi], m0) # より良いノードを代入
-    return 'No Route'
+        for i in range(4):
+            (xx, yy) = (x + vx[i], y + vy[i])
+            if not (xx < 0 or xx > n-1 or yy < 0 or yy > m - 1 or maps[yy][xx] == 1 or closed[yy][xx] == 1):
+                m0 = node(xx, yy, n0.gs, n0.fs)     # 子ノード
+                m0.next_move()                      # 次へ移動
+                m0.update_fs(x2, y2)                # 優先度の更新
+                # openリスト中にない場合は追加
+                if opened[yy][xx] == 0:
+                    opened[yy][xx] = m0.fs
+                    heappush(cost[ci], m0)
+                    v[yy][xx] = (i + 2) % 4         # 親ノードの方向をマーク
+                elif opened[yy][xx] > m0.fs:
+                    opened[yy][xx] = m0.fs          # 優先度を更新
+                    v[yy][xx] = (i + 2) % 4         # 親の方向を更新
+                    while not (cost[ci][0].x == xx and cost[ci][0].y == yy):
+                        heappush(cost[1 - ci], cost[ci][0])
+                        heappop(cost[ci])
+                    heappop(cost[ci])                # 目標ノードを除去
+                    # 小さい方に、より大きなサイズのプライオリティキューを空にする
+                    if len(cost[ci]) > len(cost[1 - ci]):
+                        ci = 1 - ci
+                    while len(cost[ci]) > 0:
+                        heappush(cost[1-ci], cost[ci][0])
+                        heappop(cost[ci])
+                    ci = 1 - ci
+                    heappush(cost[ci], m0)           # より良いノードを代入
 
 def main():
-    maps = []
-    row = [0] * 30
-    for i in range(30): # create empty map
-        maps.append(list(row))
-    pathFind(maps, (1, 1), (20, 20))
+    im = cv2.imread("map.png")                  # 地図画像の取得
+    gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) # グレースケール変換
+    gray[gray < 50] = 1                         # 経路探索用マップに変換(移動可能=0, 不可=1)
+    gray[gray > 51] = 0
+    path = astar(gray, (1, 1), (99, 99))        # A*アルゴリズムで経路探索
+    if len(path)==0:
+        print("No route")
+        return 0
+    for y, x in path[::]:                       # 探索した経路を画像に描く
+        cv2.circle(im,(int(x),int(y)), 1, (15,20,215), 1)
+    cv2.imwrite("map2.png",im)
 
 if __name__ == "__main__":
     main()

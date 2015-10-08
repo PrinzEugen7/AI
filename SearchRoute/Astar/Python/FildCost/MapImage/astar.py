@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import numpy as np
+import cv2
+
 class Node(object):
     def __init__(self,x,y):
         self.pos = (x,y)
@@ -54,24 +57,24 @@ def astar(maps, start, goal):
             # 移動先ノードがマップ外or障害物(O)の場合はスルー
             if (0 < y < h and 0 < x < w and maps[y][x] == '1'): continue
             m = open_list.find(x,y) # 移動先ノードがOpenリストに格納されているかチェック
-            dist = (n.pos[0]-x)**2 + (n.pos[1]-y)**2
+            cost = (n.pos[0]-x)**2 + (n.pos[1]-y)**2
             if m: # 移動先ノーがOpenリストに格納されていた場合、より小さいf*ならばノードmのf*を更新し、親を書き換え
-                if m.fs > n_gs + m.hs + dist:
-                    m.fs = n_gs + m.hs + dist
+                if m.fs > n_gs + m.hs + cost:
+                    m.fs = n_gs + m.hs + cost
                     m.parent_node = n
             else:
                 m = close_list.find(x,y)
                 # 移動先のノードがCloseリストに格納されていた場合、より小さいf*ならばノードmのf*を更新し、親を書き換えかつ、Openリストに移動する
                 if (m):
-                    if m.fs > n_gs + m.hs + dist:
-                        m.fs = n_gs + m.hs + dist
+                    if m.fs > n_gs + m.hs + cost:
+                        m.fs = n_gs + m.hs + cost
                         m.parent_node = n
                         open_list.append(m)
                         close_list.remove(m)
                 # 新規ノードならばOpenリストにノードに追加
                 else:
                     m = Node(x,y)
-                    m.fs = n_gs + m.hs + dist
+                    m.fs = n_gs + m.hs + cost
                     m.parent_node = n
                     open_list.append(m)
 
@@ -88,15 +91,17 @@ def astar(maps, start, goal):
     return path
 
 def main():
-    maps = [
-    [0,0,0,0,0],
-    [0,0,1,0,1],
-    [0,1,0,0,0],
-    [0,1,1,0,0],
-    [0,0,0,0,0]
-    ]
-    path = astar(maps, (1,1), (3,4))
-    print path
+    im = cv2.imread("map.png")                  # 地図画像の取得
+    gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) # グレースケール変換
+    gray[gray < 50] = 1                         # 経路探索用マップに変換(移動可能=0, 不可=1)
+    gray[gray > 51] = 0
+    path = astar(gray, (1,1), (29,29))
+    if len(path)==0:
+        print("No route")
+        return 0
+    for y, x in path[::]:                       # 探索した経路を画像に描く
+        cv2.circle(im,(int(x),int(y)), 1, (15,20,215), 1)
+    cv2.imwrite("map2.png",im)
 
 if __name__ == "__main__":
     main()

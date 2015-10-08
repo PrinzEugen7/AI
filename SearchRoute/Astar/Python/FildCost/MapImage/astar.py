@@ -91,23 +91,29 @@ def astar(maps, hz_map, start, goal):
 
 def main():
     im = cv2.imread("map.png")                  # 地図画像の取得
-    hz = cv2.imread("hzmap.png")                  # 地図画像の取得
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) # グレースケール変換
-    hz = cv2.cvtColor(hz, cv2.COLOR_BGR2GRAY) # グレースケール変換
     gray[gray < 50] = 1                         # 経路探索用マップに変換(移動可能=0, 不可=1)
     gray[gray > 51] = 0
-    hz[hz < 50] = 20                         # 経路探索用マップに変換(移動可能=0, 不可=1)
-    hz[hz > 51] = 0
+    hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)   # HSV変換
+    # 赤色領域のマスクを作成
+    hsv_min = np.array([160, 150, 0])
+    hsv_max = np.array([190, 255, 255])
+    mask = cv2.inRange(hsv, hsv_min,  hsv_max)
+    mask[mask < 50] = 0
+    mask[mask > 51] = 1000
     # A-starアルゴリズムで最短経路を探索
-    path = astar(gray,hz, (1,1), (90,90))
+    path = astar(gray,mask, (1,1), (190,190))
     # 経路が見つからなかった場合
     if len(path)==0:
         print("No route")
         return 0
     # 探索した経路を画像に描く
     for y, x in path[::]:
-        cv2.circle(im,(int(x),int(y)), 1, (15,20,215), 1)
-    cv2.imwrite("map2.png",im)
+        cv2.circle(im,(int(x),int(y)), 1, (15,215,5), 1)
+    cv2.imshow("Astar",im)
+    cv2.imshow("Mask",mask)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()

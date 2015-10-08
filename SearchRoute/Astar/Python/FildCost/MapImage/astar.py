@@ -20,86 +20,92 @@ class NodeList(list):
     def remove(self,node):
         del self[self.index(node)]
 
-def astar(maps, start, goal):
-    w = max([len(x) for x in maps])
-    h = len(maps)
-    Node.start = start
-    Node.goal = goal
-    # OpenリストとCloseリストを設定
-    open_list = NodeList()
-    close_list = NodeList()
-    start_node = Node(*Node.start)
-    start_node.fs = start_node.hs
-    open_list.append(start_node)
+def astar(maps, hz_map, start, goal):
+    (h, w) = maps.shape             # マップのサイズ
+    Node.start = start              # スタート座標の定義
+    Node.goal = goal                # ゴール座標の定義
+    open_list = NodeList()          # Openリストの作成
+    close_list = NodeList()         # Closeリストの作成
+    start_node = Node(*Node.start)  # スタートノードの作成
+    start_node.fs = start_node.hs   # f*(S)=h*(S)
+    open_list.append(start_node)    # スタートノードをOpenリストに追加
 
     while(1):
-        # Openリストが空になったら解なし
-        if open_list == []:
-            print "No route!"
-            exit(1);
-
+        # Openリストが空になったら経路無し
+        if open_list == []:exit(1);
         # Openリストからf*が最少のノードnを取得
         n = min(open_list, key = lambda x:x.fs)
-        open_list.remove(n)     # ノードnをOpenノードから除去
-        close_list.append(n)    # ノードnをCloseノードに追加
-
+        open_list.remove(n)     # nをOpenリストから削除
+        close_list.append(n)    # nをCloseリストに追加
         # 最小ノードがゴールだったら終了
         if n.isGoal():
             goal_node = n
             break
 
-        n_gs = n.fs - n.hs        # f*() = g*() + h*() -> g*() = f*() - h*()
-
+        n_gs = n.fs - n.hs        # g*(n)=f*(n)-h*(n)
         # ノードnの移動可能方向のノードを調べる
         for v in ((1,0),(-1,0),(0,1),(0,-1)):
             x = n.pos[0] + v[0]
             y = n.pos[1] + v[1]
             # 移動先ノードがマップ外or障害物(O)の場合はスルー
-            if (0 < y < h and 0 < x < w and maps[y][x] == '1'): continue
-            m = open_list.find(x,y) # 移動先ノードがOpenリストに格納されているかチェック
-            cost = (n.pos[0]-x)**2 + (n.pos[1]-y)**2
-            if m: # 移動先ノーがOpenリストに格納されていた場合、より小さいf*ならばノードmのf*を更新し、親を書き換え
+            if (0 < y < h and 0 < x < w and maps[y][x] == 1): continue
+            # 移動先ノードがOpenリストにあるか確認
+            m = open_list.find(x,y)
+            cost = (n.pos[0]-x)**2 + (n.pos[1]-y)**2 + hz_map[y][x]    # 移動コスト:cost(n)
+            # mがOpenリストにある時
+            if m:
+                # より小さいf*(m)ならばf*(m)を更新して親を書き換え
                 if m.fs > n_gs + m.hs + cost:
-                    m.fs = n_gs + m.hs + cost
-                    m.parent_node = n
+                    m.fs = n_gs + m.hs + cost   # f*(m)=g*(n)+h*(m)+cost(n)
+                    m.parent_node = n           # nをmの親ノードに追加
             else:
+                # 移動先ノードがCloseリストにあるか確認
                 m = close_list.find(x,y)
-                # 移動先のノードがCloseリストに格納されていた場合、より小さいf*ならばノードmのf*を更新し、親を書き換えかつ、Openリストに移動する
+                # mがCloseリストにある時、より小さいf*ならばf*(m)を更新して親を書き換え、Openリストに移動
                 if (m):
                     if m.fs > n_gs + m.hs + cost:
-                        m.fs = n_gs + m.hs + cost
-                        m.parent_node = n
-                        open_list.append(m)
-                        close_list.remove(m)
-                # 新規ノードならばOpenリストにノードに追加
+                        m.fs = n_gs + m.hs + cost   # f*(m)=g*(n)+h*(m)+cost(n)
+                        m.parent_node = n           # nをmの親ノードに追加
+                        open_list.append(m)         # mをOpenリストに追加
+                        close_list.remove(m)        # mをCloseリストから削除
+                # OpenリストにもCloseリストにもない新規ノードならばOpenリストにノードに追加
                 else:
                     m = Node(x,y)
-                    m.fs = n_gs + m.hs + cost
-                    m.parent_node = n
-                    open_list.append(m)
+                    m.fs = n_gs + m.hs + cost   # f*(m)=g*(n)+h*(m)+cost(n)
+                    m.parent_node = n           # nをmの親ノードに追加
+                    open_list.append(m)         # mをOpenリストに追加
 
-    # ゴールノードから親を辿って経路を求める
     n = goal_node.parent_node
-    path = [goal]
+    path = [goal]                           # ゴール座標を経路に追加
+    m = [[x for x in line] for line in maps]
+    # ゴールノードから親ノードを辿って経路を求める
+    n = goal_node.parent_node
     m = [[x for x in line] for line in maps]
     while(1):
         if n.parent_node == None: break
-        path.append(n.pos)
+        path.append((n.pos[1], n.pos[0]))   # ノードnを経路に追加
         n = n.parent_node
-    path.append(start)
-    path.reverse()      # 順序反転
+    path.append(start)                      # スタート座標を経路に追加
+    path.reverse()                          # 順序反転
     return path
 
 def main():
     im = cv2.imread("map.png")                  # 地図画像の取得
+    hz = cv2.imread("hzmap.png")                  # 地図画像の取得
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) # グレースケール変換
+    hz = cv2.cvtColor(hz, cv2.COLOR_BGR2GRAY) # グレースケール変換
     gray[gray < 50] = 1                         # 経路探索用マップに変換(移動可能=0, 不可=1)
     gray[gray > 51] = 0
-    path = astar(gray, (1,1), (29,29))
+    hz[hz < 50] = 20                         # 経路探索用マップに変換(移動可能=0, 不可=1)
+    hz[hz > 51] = 0
+    # A-starアルゴリズムで最短経路を探索
+    path = astar(gray,hz, (1,1), (90,90))
+    # 経路が見つからなかった場合
     if len(path)==0:
         print("No route")
         return 0
-    for y, x in path[::]:                       # 探索した経路を画像に描く
+    # 探索した経路を画像に描く
+    for y, x in path[::]:
         cv2.circle(im,(int(x),int(y)), 1, (15,20,215), 1)
     cv2.imwrite("map2.png",im)
 

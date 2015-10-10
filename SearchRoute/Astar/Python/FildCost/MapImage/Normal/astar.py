@@ -51,7 +51,7 @@ def astar(maps, hz_map, start, goal):
             if (0 < y < h and 0 < x < w and maps[y][x] == 1): continue
             # 移動先ノードがOpenリストにあるか確認
             m = open_list.find(x,y)
-            cost = (n.pos[0]-x)**2 + (n.pos[1]-y)**2 + hz_map[y][x]    # 移動コスト:cost(n)
+            cost = (n.pos[0]-x)**2 + (n.pos[1]-y)**2 + hz_map[y][x]*500    # 移動コスト:cost(n)
             # mがOpenリストにある時
             if m:
                 # より小さいf*(m)ならばf*(m)を更新して親を書き換え
@@ -89,20 +89,25 @@ def astar(maps, hz_map, start, goal):
     path.reverse()                          # 順序反転
     return path
 
+
 def main():
-    im = cv2.imread("map.png")                  # 地図画像の取得
+    kernel = np.ones((3,3),np.uint8)
+    im = cv2.imread("map.jpg")                  # 地図画像の取得
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) # グレースケール変換
-    gray[gray < 50] = 1                         # 経路探索用マップに変換(移動可能=0, 不可=1)
-    gray[gray > 51] = 0
-    hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)   # HSV変換
+    th = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+    th = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel)
+    th[th < 50] = 1                             # 経路探索用マップに変換(移動可能=0, 不可=1)
+    th[th > 51] = 0
+    hz = cv2.imread("hz.jpg")                   # ハザードマップの取得
+    hsv = cv2.cvtColor(hz, cv2.COLOR_BGR2HSV)   # HSV変換
     # 赤色領域のマスクを作成
     hsv_min = np.array([160, 150, 0])
     hsv_max = np.array([190, 255, 255])
     mask = cv2.inRange(hsv, hsv_min,  hsv_max)
     mask[mask < 50] = 0
-    mask[mask > 51] = 1000
+    mask[mask > 51] = 1
     # A-starアルゴリズムで最短経路を探索
-    path = astar(gray,mask, (1,1), (190,190))
+    path = astar(th, mask, (325,256), (294,48))
     # 経路が見つからなかった場合
     if len(path)==0:
         print("No route")
@@ -111,7 +116,6 @@ def main():
     for y, x in path[::]:
         cv2.circle(im,(int(x),int(y)), 1, (15,215,5), 1)
     cv2.imshow("Astar",im)
-    cv2.imshow("Mask",mask)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 

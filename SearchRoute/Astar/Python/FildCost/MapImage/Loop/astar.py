@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import cv2
+import time
 
 class Node(object):
     def __init__(self,x,y):
@@ -119,12 +120,24 @@ def main():
     if len(path)==0:
         print("No route")
         return 0
-    # 探索した経路を画像に描く
-    for y, x in path[::]:
-        cv2.circle(im,(int(x),int(y)), 1, (15,215,5), 1)
-    cv2.imshow("Astar",im)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    i = 0
+    while(1):
+        # 探索した経路を画像に描く
+        for y, x in path[::]:
+            cv2.circle(im,(int(x),int(y)), 1, (15,215,5), 1)
+        cv2.circle(im,(int(path[i][1]),int(path[i][0])), 5, (15,15,215), -1)
+        cv2.imshow("Test",im)                                       # 結果の表示
+        im = cv2.imread("map.jpg")  # マップの取得                                    # 追跡領域の更新
+        i+=1
+        time.sleep(0.2)
+        # 任意のキーが押されたら終了
+        if cv2.waitKey(10) > 0:
+            cv2.destroyAllWindows()     # ウィンドウ破棄
+            break
+        if i > 350:
+            cv2.destroyAllWindows()     # ウィンドウ破棄
+            break
+
 
 if __name__ == "__main__":
     main()

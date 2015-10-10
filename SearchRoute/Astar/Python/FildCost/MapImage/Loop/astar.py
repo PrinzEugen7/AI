@@ -89,16 +89,16 @@ def astar(maps, hz_map, start, goal):
     path.reverse()                          # 順序反転
     return path
 
-
-def main():
+def img2map(im):
     kernel = np.ones((3,3),np.uint8)
-    im = cv2.imread("map.jpg")                  # 地図画像の取得
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) # グレースケール変換
     th = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
     th = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel)
     th[th < 50] = 1                             # 経路探索用マップに変換(移動可能=0, 不可=1)
     th[th > 51] = 0
-    hz = cv2.imread("hz.jpg")                   # ハザードマップの取得
+    return th
+
+def img2hzmap(hz):
     hsv = cv2.cvtColor(hz, cv2.COLOR_BGR2HSV)   # HSV変換
     # 赤色領域のマスクを作成
     hsv_min = np.array([160, 150, 0])
@@ -106,8 +106,15 @@ def main():
     mask = cv2.inRange(hsv, hsv_min,  hsv_max)
     mask[mask < 50] = 0
     mask[mask > 51] = 1
+    return mask
+
+def main():
+    im = cv2.imread("map.jpg")  # マップの取得
+    hz = cv2.imread("hz.jpg")   # ハザードマップの取得
+    maps = img2map(im)
+    hzmap = img2hzmap(hz)
     # A-starアルゴリズムで最短経路を探索
-    path = astar(th, mask, (325,256), (294,48))
+    path = astar(maps, hzmap, (325,256), (294,48))
     # 経路が見つからなかった場合
     if len(path)==0:
         print("No route")

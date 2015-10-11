@@ -107,16 +107,28 @@ def img2hzmap(hz):
     mask = cv2.inRange(hsv, hsv_min,  hsv_max)
     hz = mask.astype(np.int32)
     hz[hz < 50] = 0
-    hz[hz > 51] = 50000
+    hz[hz > 51] = 500
     return hz
+
+def img2wallmap(im):
+    gray1 = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) # グレースケール変換
+    th1 = cv2.adaptiveThreshold(gray1,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+    th1 = 255 - th1
+    th2 = cv2.dilate(th1,np.ones((3,3),np.uint8),iterations = 1)
+    th = th2 - th1
+    wall = th.astype(np.int32)
+    wall[wall < 50] = 0
+    wall[wall > 51] = 1000
+    return wall
 
 def main():
     im = cv2.imread("map.jpg")  # マップの取得
     hz = cv2.imread("hz1.jpg")   # ハザードマップの取得
     maps = img2map(im)
     hzmap = img2hzmap(hz)
+    wmap = img2wallmap(im)
     # A-starアルゴリズムで最短経路を探索
-    path = astar(maps, hzmap, (402,247), (294,48))
+    path = astar(maps, hzmap + wmap, (402,247), (294,48))
     # 経路が見つからなかった場合
     if len(path)==0:
         print("No route")
@@ -144,7 +156,7 @@ def main():
             hz = cv2.imread("hz2.jpg")   # ハザードマップの取得
             hzmap = img2hzmap(hz)
             print("Serching Route...")
-            path = astar(maps, hzmap, (int(path[i][1]),int(path[i][0])), (294,48))
+            path = astar(maps, hzmap+wmap, (int(path[i][1]),int(path[i][0])), (294,48))
             i = 0
             flag = 1
 

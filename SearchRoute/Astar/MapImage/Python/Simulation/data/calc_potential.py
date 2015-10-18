@@ -9,10 +9,11 @@ def unique2d(a):
     return np.delete(x, 1, 0)
 
 def main():
-    robo = np.loadtxt("path.csv")
+    robo = np.loadtxt("path2.csv")
     x,y = robo.T
     o = np.loadtxt("obstacle.csv")
-    U = 0
+    o = o[::100]
+    U=0
     # 壁のポテンシャルを計算
     for i in xrange(o.shape[0]):
         U += 1/np.sqrt((o[i][0]-x)**2+(o[i][1]-y)**2)
@@ -22,6 +23,3 @@ def main():
     print("U=" + str(np.sum(U)) )
     print("u=" + str(np.sum(U)/U.shape[0]) )
     print("L=" + str(L) )
-
-if __name__ == '__main__':
-    main()

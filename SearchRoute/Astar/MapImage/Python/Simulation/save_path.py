@@ -84,7 +84,7 @@ def astar(maps, hz_map, start, goal):
     m = [[x for x in line] for line in maps]
     while(1):
         if n.parent_node == None: break
-        path.append((n.pos[1], n.pos[0]))   # ノードnを経路に追加
+        path.append((n.pos[0], n.pos[1]))   # ノードnを経路に追加
         n = n.parent_node
     path.append(start)                      # スタート座標を経路に追加
     path.reverse()                          # 順序反転
@@ -112,7 +112,7 @@ def img2hzmap(hz):
 
 def main():
     im = cv2.imread("map.jpg")  # マップの取得
-    hz = cv2.imread("hz1.jpg")   # ハザードマップの取得
+    hz = cv2.imread("hz2.jpg")   # ハザードマップの取得
     maps = img2map(im)
     hzmap = img2hzmap(hz)
     # A-starアルゴリズムで最短経路を探索
@@ -122,7 +122,8 @@ def main():
     if len(path)==0:
         print("No route")
         return 0
-    np.savetxt("path.csv", path, fmt="%d",delimiter=",")
+
+    np.savetxt("path2.csv", path, fmt="%d")
 
 
 if __name__ == "__main__":

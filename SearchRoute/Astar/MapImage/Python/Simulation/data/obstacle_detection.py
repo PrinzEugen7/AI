@@ -16,7 +16,7 @@ def main():
     hsv_max = np.array([190,255,255])
     mask = cv2.inRange(hsv, hsv_min, hsv_max)
     x2,x1 = np.array(np.nonzero(mask))
-    w = np.dstack((x1,x2))[0]/5
+    w = np.dstack((x1,x2))[0]
     cv2.imshow("View",mask)
     cv2.waitKey(0)
     cv2.destroyAllWindows()                     # ウィンドウ破棄

@@ -7,8 +7,9 @@ def main():
     data = pd.read_csv("data.csv", sep=",")
     # ニューラルネットで学習
     clf = MLPClassifier(solver="sgd",random_state=0,max_iter=10000)
-    # 予測
+    # 学習(説明変数x1, x2、目的変数x3)
     clf.fit(data[['x1', 'x2']], data['x3'])
+    # 学習データを元に説明変数x1, x2から目的変数x3を予測
     pred = clf.predict(data[['x1', 'x2']])
     # 結果表示
     print (pred)

@@ -14,7 +14,7 @@ def main():
     # 予測
     clf.fit(X_train, y_train)
     # 結果表示
-    print (clf.score(X_test, y_test))
+    print ("識別率：", clf.score(X_test, y_test))
     
 if __name__ == "__main__":
     main()

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 from sklearn import tree
+from sklearn.externals import joblib
 
 def main():
     # CSVファイルを取得

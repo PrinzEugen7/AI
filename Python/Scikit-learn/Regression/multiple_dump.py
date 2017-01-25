@@ -11,7 +11,7 @@ def main():
     X = data.loc[:, ['x1', 'x2']].as_matrix()
     # 目的変数に "x2"のデータを使用
     Y = data['x3'].as_matrix()
-    # 予測モデルを作成（単回帰）
+    # 予測モデルを作成（重回帰）
     clf.fit(X, Y)
     # 回帰係数と切片の抽出
     a = clf.coef_
